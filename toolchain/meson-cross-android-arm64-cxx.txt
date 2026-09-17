@@ -1,0 +1,45 @@
+[binaries]
+c = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang'
+cpp = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++'
+ar = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
+strip = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
+ranlib = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib'
+pkg-config = '${FT_ROOT}/pkgconf-wrap.sh'
+# ! GOTCHA A - the same failure hits contourpy, and the scipy recipe hit it first:
+#   `pybind11-config --includes` prepends the BUILD python's include
+#   (-I/usr/include/python3.14t), whose Debian multiarch redirect dies under cross-compile:
+#       pyconfig.h:9: fatal error: 'aarch64-linux-gnu/python3.14t/pyconfig.h' file not found
+#   The wrapper strips it; the correct TARGET include comes from the package's own
+#   `python` dependency. meson only finds config-tools LISTED HERE, which is why this
+#   line is the fix rather than anything in the package.
+pybind11-config = '${FT_ROOT}/pybind11-config-cross.sh'
+
+[host_machine]
+system = 'android'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'
+
+[properties]
+longdouble_format = 'IEEE_DOUBLE_LE'
+needs_exe_wrapper = true
+
+[built-in options]
+# ! GOTCHA D . Extensions built through meson's `py.extension_module()` do NOT
+#   link libpython on Linux - symbols resolve from the interpreter at load. Android
+#   is not Linux here: ld.lld refuses, and kiwisolver died with pages of
+#   `undefined symbol: PyType_FromSpec / PyFloat_FromDouble / PyArg_ParseTuple`.
+#   numpy and scipy never hit it because they resolve Python through PKG-CONFIG,
+#   and `python-3.14t.pc` carries `Libs: -L${libdir} -lpython3.14t` - so the link
+#   arrives with the dependency. A sysconfig-resolved build gets no such thing.
+#   `-Dcpp_link_args=...` on the command line does NOT survive (meson wants an
+#   array); the cross-file is where it holds.
+# ! GOTCHA C, second half . The /usr/local/include symlink fixes INCLUDEPY, but
+#   meson's python.find_installation() uses sysconfig `paths.include`, which is
+#   /usr/include/python3.14t - the HOST's, whose multiarch redirect dies. Prepending
+#   the TARGET include here makes it win the search order, so Python.h and pyconfig.h
+#   both resolve from the target regardless of what meson appends afterwards.
+c_args = ['-I${FT_ROOT}/chaquopy/target/prefix/arm64-v8a/include/python3.14t']
+cpp_args = ['-I${FT_ROOT}/chaquopy/target/prefix/arm64-v8a/include/python3.14t']
+c_link_args = ['-L${FT_ROOT}/chaquopy/target/prefix/arm64-v8a/lib', '-lpython3.14t', '-Wl,-z,max-page-size=16384']
+cpp_link_args = ['-L${FT_ROOT}/chaquopy/target/prefix/arm64-v8a/lib', '-lpython3.14t', '-Wl,-z,max-page-size=16384']

@@ -1,0 +1,137 @@
+diff --git a/product/buildSrc/src/main/java/com/chaquo/python/internal/Common.java b/product/buildSrc/src/main/java/com/chaquo/python/internal/Common.java
+index 1c28f08..9a6d13d 100644
+--- a/product/buildSrc/src/main/java/com/chaquo/python/internal/Common.java
++++ b/product/buildSrc/src/main/java/com/chaquo/python/internal/Common.java
+@@ -18,10 +18,6 @@ public class Common {
+     public static final Map<String, String> PYTHON_VERSIONS = new LinkedHashMap<>();
+     static {
+         // Version, build number
+-        PYTHON_VERSIONS.put("3.10.19", "0");
+-        PYTHON_VERSIONS.put("3.11.14", "0");
+-        PYTHON_VERSIONS.put("3.12.12", "0");
+-        PYTHON_VERSIONS.put("3.13.9", "0");
+         PYTHON_VERSIONS.put("3.14.0", "0");
+     }
+ 
+@@ -33,7 +29,7 @@ public class Common {
+         }
+     }
+ 
+-    public static final String DEFAULT_PYTHON_VERSION = "3.10";
++    public static final String DEFAULT_PYTHON_VERSION = "3.14";
+ 
+     public static List<String> supportedAbis(String pythonVersion) {
+         if (!PYTHON_VERSIONS_SHORT.contains(pythonVersion)) {
+@@ -43,11 +39,6 @@ public class Common {
+ 
+         List<String> result = new ArrayList<>();
+         result.add("arm64-v8a");
+-        result.add("x86_64");
+-        if (Arrays.asList("3.8", "3.9", "3.10", "3.11").contains(pythonVersion)) {
+-            result.add("armeabi-v7a");
+-            result.add("x86");
+-        }
+         result.sort(null);  // For testing error messages
+         return result;
+     }
+diff --git a/product/gradle-plugin/src/main/kotlin/PythonTasks.kt b/product/gradle-plugin/src/main/kotlin/PythonTasks.kt
+index c398de1..9c2c9b4 100644
+--- a/product/gradle-plugin/src/main/kotlin/PythonTasks.kt
++++ b/product/gradle-plugin/src/main/kotlin/PythonTasks.kt
+@@ -440,7 +440,7 @@ internal class TaskBuilder(
+             inputs.files(*tasks)
+             doLast {
+                 val buildJson = JSONObject()
+-                buildJson.put("python_version", python.version)
++                buildJson.put("python_version", python.version + (if (python.version == "3.14") "t" else ""))
+                 buildJson.put("assets", hashAssets(*tasks))
+                 buildJson.put("extract_packages", JSONArray(python.extractPackages))
+                 File(assetDir, Common.ASSET_BUILD_JSON).writeText(buildJson.toString(4))
+diff --git a/product/runtime/build.gradle b/product/runtime/build.gradle
+index e120249..6af692d 100644
+--- a/product/runtime/build.gradle
++++ b/product/runtime/build.gradle
+@@ -230,7 +230,7 @@ if (!(cmakeBuildType in KNOWN_BUILD_TYPES)) {
+         "Unknown build type '$cmakeBuildType'; valid values are $KNOWN_BUILD_TYPES")
+ }
+ 
+-(["host"] + Common.supportedAbis("3.11")).each { abi ->
++(["host"] + Common.supportedAbis("3.14")).each { abi ->
+     def pyVersions = Common.PYTHON_VERSIONS_SHORT.findAll {
+         Common.supportedAbis(it).contains(abi)
+     }
+diff --git a/product/runtime/src/main/python/chaquopy_java.pyx b/product/runtime/src/main/python/chaquopy_java.pyx
+index 5c9939d..56aecab 100644
+--- a/product/runtime/src/main/python/chaquopy_java.pyx
++++ b/product/runtime/src/main/python/chaquopy_java.pyx
+@@ -474,7 +474,7 @@ cdef public jint Java_com_chaquo_python_PyObject_hashCode \
+ # Use `DEF` rather than `cdef const` because the latter may not be initialized after module
+ # initialization failure.
+ DEF fqn_PyException_b = b"com/chaquo/python/PyException"
+-fqn_PyException = fqn_PyException_b.decode()
++fqn_PyException = fqn_PyException_b.decode("utf-8")
+ 
+ 
+ # See note at convert_exception for why local `jclass` proxy objects must be destroyed before
+diff --git a/product/runtime/src/main/python/java/android/importer.py b/product/runtime/src/main/python/java/android/importer.py
+index cfae6e4..efe4794 100644
+--- a/product/runtime/src/main/python/java/android/importer.py
++++ b/product/runtime/src/main/python/java/android/importer.py
+@@ -385,6 +385,12 @@ class AssetPath(Traversable):
+     def name(self):
+         return basename(str(self))
+ 
++    @property
++    def parent(self):
++        # CPython 3.14 importlib.metadata.locate_file() uses .parent on the
++        # distribution root; Traversable has none. Mirror joinpath construction.
++        return type(self)(dirname(str(self)))
++
+     def exists(self):
+         return self.finder.exists(self.zip_path)
+ 
+diff --git a/product/runtime/src/main/python/java/conversion.pxi b/product/runtime/src/main/python/java/conversion.pxi
+index d221671..a34e279 100644
+--- a/product/runtime/src/main/python/java/conversion.pxi
++++ b/product/runtime/src/main/python/java/conversion.pxi
+@@ -103,7 +103,8 @@ cdef unicode j2p_string(JNIEnv *j_env, JNIRef j_string):
+     if jchar_str == NULL:
+         raise Exception("GetStringChars failed")
+     cdef int str_len = j_env[0].GetStringLength(j_env, j_string.obj)
+-    s = (<char*>jchar_str)[:str_len * 2].decode(JCHAR_ENCODING)  # 2 bytes/char for UTF-16.
++    cdef str _dec_enc = JCHAR_ENCODING  # runtime var: dodge Cython bytes.decode const-fold bug
++    s = (<char*>jchar_str)[:str_len * 2].decode(_dec_enc)  # 2 bytes/char for UTF-16.
+     j_env[0].ReleaseStringChars(j_env, j_string.obj, jchar_str)
+     return s
+ 
+diff --git a/target/abi-to-host.sh b/target/abi-to-host.sh
+old mode 100644
+new mode 100755
+diff --git a/target/android-env.sh b/target/android-env.sh
+old mode 100644
+new mode 100755
+diff --git a/target/python/build.sh b/target/python/build.sh
+index acc7789..f16fbae 100755
+--- a/target/python/build.sh
++++ b/target/python/build.sh
+@@ -117,9 +117,18 @@ if [ $version_int -le 312 ]; then
+ # Python 3.13 and later comes with an official Android build script.
+ else
+     mkdir -p cross-build/build
+-    ln -s "$(which python$version_short)" cross-build/build/python
++    # Chaquopy FT patch: DISABLE_GIL=1 -> free-threaded (PEP 703) target.
++    # Use the free-threaded build-python (ABI must match the host) and pass
++    # --disable-gil through to the official CPython Android host configure.
++    if [ "${DISABLE_GIL:-0}" = "1" ]; then
++        ln -s "$(which python${version_short}t)" cross-build/build/python
++        gil_args="-- --disable-gil"
++    else
++        ln -s "$(which python$version_short)" cross-build/build/python
++        gil_args=""
++    fi
+ 
+-    Android/android.py configure-host "$HOST"
++    Android/android.py configure-host "$HOST" $gil_args
+     Android/android.py make-host "$HOST"
+     cp -a "cross-build/$HOST/prefix/"* "$PREFIX"
+ fi

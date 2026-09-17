@@ -1,0 +1,65 @@
+ft-python-android
+Copyright 2026 thedbp
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+---
+
+THIRD-PARTY SOFTWARE
+
+This repository contains BUILD DRIVERS only. It does not redistribute any of the
+software it builds. Each of the following carries its own licence and must be
+obtained from its own project:
+
+  CPython            Python Software Foundation License 2.0
+  OpenBLAS           BSD 3-Clause
+  NumPy              BSD 3-Clause
+  SciPy              BSD 3-Clause
+  Chaquopy           MIT
+  LLVM / flang       Apache 2.0 with LLVM exceptions
+  Android NDK        Android Software Development Kit License Agreement
+
+  matplotlib         PSF-style (bundled fonts may add SIL OFL)
+  Pillow             MIT-CMU
+  contourpy          BSD 3-Clause
+  kiwisolver         BSD 3-Clause
+  cffi               MIT
+  libffi             MIT
+  libogg/vorbis      BSD 3-Clause
+  libFLAC            BSD 3-Clause
+  libopus            BSD 3-Clause
+  soundfile          BSD 3-Clause
+  libsndfile         ** LGPL-2.1-or-later ** - see the note below
+
+CHAQUOPY IS MIT, AND THIS FILE USED TO SAY OTHERWISE. The previous wording,
+"commercial/licensed terms apply", was wrong. Verified against the project's own
+LICENSE.txt: SPDX "MIT", "Copyright (c) 2017-2025 Chaquo Ltd". Correcting it before
+publication rather than after.
+
+CPYTHON IS BUILT MODIFIED. These drivers apply `--disable-gil` (PEP 703) plus a ctypes
+abiflags patch. PSF-2.0 section 3 requires a statement of changes with anything you
+redistribute: say that the CPython you ship is modified, and how.
+
+LIBSNDFILE IS THE ONE THAT IS NOT ATTRIBUTION-ONLY. The audio stage produces a
+`soundfile` wheel that BUNDLES `_soundfile_data/libsndfile_arm64.so`. libsndfile is
+LGPL-2.1-or-later - weak copyleft. Proprietary application code may link it, but a
+REDISTRIBUTOR owes: the LGPL text, the exact version (1.2.2 here), a link to upstream
+source, and a path for a user to relink against their own build. soundfile's wheel
+ships only its own BSD-3 licence, so the LGPL text is NOT there by default.
+  ! This is a redistribution obligation, not a build-driver one. It binds whoever ships
+    the WHEEL or an app containing it - INCLUDING release artifacts attached to this
+    repository. Attaching built wheels here without the LGPL text would be the first
+    time this repo redistributes anything, and the sentence below stops being true.
+
+If you redistribute anything BUILT with these drivers, the obligations of those
+licences travel with the artifacts - not with this repository.

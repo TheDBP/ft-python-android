@@ -1,0 +1,28 @@
+[binaries]
+c = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang'
+cpp = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++'
+ar = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
+strip = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
+ranlib = '${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib'
+pkg-config = '${FT_ROOT}/pkgconf-wrap.sh'
+
+[host_machine]
+system = 'android'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'
+
+[properties]
+longdouble_format = 'IEEE_DOUBLE_LE'
+needs_exe_wrapper = true
+
+[built-in options]
+# 16 KB page-size alignment: forward-compatible with 4 KB kernels; required for
+# Android 15+/Play and 16 KB-page devices.
+# ! IN [built-in options], NOT [properties]: [properties] link args are the
+#   deprecated location meson may silently ignore - and a dropped linker flag
+#   fails SILENTLY, which is this flag's whole failure mode. Verify the built
+#   payload, never the source: every LOAD segment must report p_align >= 0x4000.
+c_link_args = ['-Wl,-z,max-page-size=16384']
+cpp_link_args = ['-Wl,-z,max-page-size=16384']
+fortran_link_args = ['-Wl,-z,max-page-size=16384']

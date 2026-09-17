@@ -1,0 +1,15 @@
+# Keep the build context tiny — only the recipe scripts, patches and cross files
+# are needed; the Dockerfile fetches every heavy input itself.
+.git
+out/
+build/
+buildvenv/
+android-sdk/
+flang-rtlibs/
+openblas-android/
+wheels/
+*.whl
+*.tar.gz
+*.so
+__pycache__/
+.DS_Store

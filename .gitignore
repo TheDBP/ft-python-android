@@ -1,0 +1,17 @@
+# the build tree is multi-GB and regenerable - never commit it
+build/
+buildvenv/
+android-sdk/
+flang-rtlibs/
+openblas-android/
+# build OUTPUT (the documented `docker run -v "$PWD/out:/out"` default) - the wheels
+# + Chaquopy target belong in a GitHub Release, never in git
+out/
+*.whl
+*.tar.gz
+*.so
+__pycache__/
+.DS_Store
+
+# Local build notes, deliberately not published.
+BUILD_HISTORY.md
