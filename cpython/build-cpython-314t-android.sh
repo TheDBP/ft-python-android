@@ -57,6 +57,18 @@ for name in $patches; do
     patch -p1 -i "$patch_file"
 done
 
+# ** ctypes.pythonapi on a FREE-THREADED Android build (2026-10-18). ** Upstream loads
+# "libpython%d.%d.so", i.e. libpython3.14.so - which a free-threaded build does not have
+# (it ships libpython3.14t.so), so ctypes.pythonapi fails on the device. The hand-built
+# 3.14.0 target that apps shipped carried exactly this line; a Docker rebuild without it
+# was caught by a stdlib diff against that target. Fail loudly if the source moved.
+ct=Lib/ctypes/__init__.py
+if grep -q 'pythonapi = PyDLL("libpython%d.%d.so" % _sys.version_info\[:2\])' "$ct"; then
+    sed -i 's|pythonapi = PyDLL("libpython%d.%d.so" % _sys.version_info\[:2\])|pythonapi = PyDLL("libpython%d.%d%s.so" % (_sys.version_info[0], _sys.version_info[1], _sys.abiflags))|' "$ct"
+fi
+grep -A1 '_sys.platform == "android"' "$ct" | grep -q 'abiflags' \
+    || { echo "ctypes android pythonapi: abiflags fix missing (upstream text changed?)" >&2; exit 1; }
+
 # Remove any existing installation in the prefix.
 rm -rf $PREFIX/{include,lib}/python$version_short
 rm -rf $PREFIX/lib/libpython$version_short*

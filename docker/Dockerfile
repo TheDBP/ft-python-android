@@ -20,6 +20,20 @@ ARG CHAQUOPY_REF=f004380
 ARG OPENBLAS_VERSION=0.3.34
 ARG NUMPY_VERSION=2.5.1
 ARG SCIPY_VERSION=1.18.0
+# The HOST tools, pinned (2026-10-18). Unpinned, a rebuild a month later resolved
+# meson-python 0.22.1 and scipy 1.18.0's build refused it (it needs <0.22). These are the
+# exact versions inside the image that built the 2026-09-17 wheels.
+ARG UV_VERSION=0.12.15
+ARG HOST_PY_VERSION=3.14.7
+ARG MESON_VERSION=1.12.0
+ARG MESON_PYTHON_VERSION=0.21.1
+ARG NINJA_VERSION=1.13.2
+ARG CYTHON_VERSION=3.2.9
+ARG BUILD_VERSION=1.6.1
+ARG WHEEL_VERSION=0.48.0
+ARG PIP_VERSION=26.2.1
+ARG PYBIND11_VERSION=3.0.4
+ARG PYTHRAN_VERSION=0.18.1
 
 # ---- fixed layout (the stage scripts hard-code these under $FT_ROOT) ----------
 ENV FT_ROOT=/opt/ft-build \
@@ -46,13 +60,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ---- uv + a free-threaded host CPython 3.14t + the build venv ------------------
 # The buildvenv provides the host build tools AND the python3.14t that the
 # CPython Android build uses as its build-python (ABI must match the target).
-RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
-RUN uv python install "${PY_VERSION%.*}t" \
-    && uv venv --python "${PY_VERSION%.*}t" "${FT_ROOT}/buildvenv" \
+# (The host CPython only has to match the target's major.minor - CPython's cross build checks
+#  python3.14 - so one pinned 3.14.x hosts any 3.14 target, PY_VERSION=3.14.0 included.)
+RUN curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | env UV_INSTALL_DIR=/usr/local/bin sh \
+    && uv --version | grep -q "uv ${UV_VERSION}"
+RUN test "${HOST_PY_VERSION%.*}" = "${PY_VERSION%.*}" \
+    && uv python install "${HOST_PY_VERSION}t" \
+    && uv venv --python "${HOST_PY_VERSION}t" "${FT_ROOT}/buildvenv" \
     && uv pip install --python "${FT_ROOT}/buildvenv/bin/python" \
-        pip build meson meson-python ninja "cython>=3.2.0,<3.3.0" wheel \
+        "pip==${PIP_VERSION}" "build==${BUILD_VERSION}" "meson==${MESON_VERSION}" \
+        "meson-python==${MESON_PYTHON_VERSION}" "ninja==${NINJA_VERSION}" \
+        "cython==${CYTHON_VERSION}" "wheel==${WHEEL_VERSION}" \
     && uv pip install --python "${FT_ROOT}/buildvenv/bin/python" \
-        "numpy==${NUMPY_VERSION}" "pybind11>=2.13.2,<3.1.0" "pythran>=0.18.1,<0.19.0"
+        "numpy==${NUMPY_VERSION}" "pybind11==${PYBIND11_VERSION}" "pythran==${PYTHRAN_VERSION}" \
+        "setuptools==84.0.0" "packaging==26.3" "pyproject-metadata==0.12.1" \
+        "pyproject_hooks==1.3.3" "beniget==0.4.2.post1" "gast==0.6.0" "ply==3.11"
+    # ^ the transitive set too, as frozen from the 2026-09-17 image - a build-tool
+    #   dependency that moves changes the wheels just as surely as a direct one.
 
 # ---- Android NDK r27c (direct zip; stub package.xml so android-env.sh is happy) -
 RUN mkdir -p "${FT_ROOT}/android-sdk/ndk" \

@@ -47,6 +47,30 @@ out/logs/...                                                   # every stage's l
 Drop the wheels into your Chaquopy app's `pip { }` block and point the Gradle plugin at the
 Maven target. The wheels are already retagged, so Chaquopy will install them.
 
+**Interpreter only:** `docker run --rm -e FT_STAGES=target -v "$PWD/out:/out" ft-python-android`
+builds CPython and packages the target, skipping OpenBLAS/numpy/scipy/charts/audio. Pin a
+different interpreter with `docker build --build-arg PY_VERSION=3.14.0 ...` (wheels built
+against 3.14t headers load on any 3.14t).
+
+### The patched Chaquopy plugin + runtime (`chaquopy-maven/`)
+
+Stock Chaquopy publishes only GIL builds, so a free-threaded app also needs a Gradle plugin
+and runtime that know about `3.14t`. `chaquopy-maven/` builds them in Docker - Chaquopy
+`@f004380` + `chaquopy-maven/chaquopy-ALL.patch`, JDK 11 (Gradle 7.0.2), Android SDK
+(cmake 3.22.1, platform 36, NDK r27d), Cython 3.1.8 - against a target from the step above:
+
+```bash
+docker build -t ft-chaquopy-maven chaquopy-maven
+docker run --rm -v "$PWD/out/target:/in:ro" -v "$PWD/out:/out" ft-chaquopy-maven
+# -> out/maven : plugin + runtime + that target; point pluginManagement and
+#    dependencyResolutionManagement at it (file maven), keep `version = "3.14"` in the DSL.
+```
+
+It gates that every runtime `.so` links `libpython3.14t.so`. Checked 2026-10-18 against a
+hand-published maven of the same version: identical native libraries (dependencies, soname,
+exported symbols), identical plugin jar entries, identical bootstrap bytecode (`.pyc` headers
+differ only in source timestamps).
+
 ### Building without Docker
 
 [`docs/BUILD.md`](docs/BUILD.md) documents every stage as a standalone script, and is the

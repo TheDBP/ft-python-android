@@ -68,6 +68,26 @@ log "Parallel build jobs: ${JOBS} (memory-aware; override with FT_BUILD_JOBS)"
 log "Stage: CPython ${PY_VERSION}t for Android"
 "${RECIPE}/cpython/build-cpython-314t-android.sh" "${TARGET}" "${PY_VERSION}"
 
+# ** FT_STAGES=target - the interpreter TARGET only (CPython + packaging), no wheels. **
+# An app can pin one interpreter version while taking wheels from another run (wheels
+# built against 3.14t headers load on any 3.14t). This builds that target without the
+# hours-long OpenBLAS / numpy / scipy / flang stages. Same packaging call as the full
+# chain below; the target is packaged from a prefix with NO site-packages yet.
+if [ "${FT_STAGES:-all}" = target ]; then
+    log "Stage: package the Chaquopy target (FT_STAGES=target - target only)"
+    MAVEN="${FT_ROOT}/maven/com/chaquo/python/target/${PY_VERSION}-${BUILD_NUM}"
+    rm -rf "${MAVEN}"
+    "${RECIPE}/chaquopy/package-target-ft.sh" "${MAVEN}" "${TARGET}"
+    mkdir -p /out/target
+    cp "${MAVEN}"/target-*.zip "${MAVEN}"/*.pom /out/target/
+    for t in target-*-arm64-v8a.zip target-*-stdlib.zip target-*-stdlib-pyc.zip; do
+        ls /out/target/${t} >/dev/null 2>&1 || { echo "ARTIFACT MISSING: ${t}"; exit 1; }
+    done
+    echo "=== DONE (target only) - /out/target ==="
+    ls -l /out/target
+    exit 0
+fi
+
 log "Stage: OpenBLAS (arm64, USE_OPENMP=0)"
 "${RECIPE}/openblas/build_openblas.sh"
 
