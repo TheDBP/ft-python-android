@@ -9,6 +9,17 @@ demo. The produced runtime ships inside an Android app with the GIL disabled, an
 continuous audio workload meeting every processing deadline, on hardware that is years
 old. Run your own numbers; the point is that the ceiling is not where you would expect.
 
+## Prebuilt releases
+
+Built by the Docker drivers below and gated; split on the licence boundary (see `NOTICE`).
+
+| release | contents |
+|---|---|
+| `v3.14.7-0` | CPython 3.14.7t target + numpy, scipy, matplotlib, pillow, contourpy, kiwisolver, cffi wheels |
+| `v3.14.0-0` | CPython 3.14.0t target (pairs with `chaquopy-17.0.1-ft`) |
+| `chaquopy-17.0.1-ft` | Chaquopy 17.0.1 Gradle plugin + runtime patched for free-threaded 3.14 (MIT; patch attached) |
+| `soundfile-0.14.0` | soundfile wheel - **bundles LGPL libsndfile**; licence text and relink procedure attached |
+
 ---
 
 ## Build it
