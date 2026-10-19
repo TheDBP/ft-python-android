@@ -41,6 +41,10 @@ import zipfile
 
 REQUIRED = 0x4000
 
+#: Zip-shaped things this walks into, at any depth. `.imy` is a Python-on-Android
+#: bundler's inner-archive extension and is the reason nesting matters here.
+ARCHIVE_EXTS = (".whl", ".apk", ".zip", ".aar", ".imy", ".jar", ".aab")
+
 
 def elf_load_aligns(data):
     """Yield p_align of every PT_LOAD in an ELF64 image, or None if not ELF64."""
@@ -68,12 +72,30 @@ def check_blob(name, data, bad, ok):
     (ok if worst >= REQUIRED else bad).append((name, worst))
 
 
-def check_archive(path, label, bad, ok):
-    """Check every .so INSIDE a zip-shaped file (wheel, APK, plain zip)."""
-    z = zipfile.ZipFile(path)
+def check_archive(src, label, bad, ok, depth=0):
+    """Check every .so inside a zip-shaped file, INCLUDING zips nested inside it.
+
+    ! NESTED ARCHIVES ARE NOT A CORNER CASE. Some packagers do not ship native modules
+      loose inside the app archive; they pack the whole runtime into inner bundles that
+      are themselves zips. Walking only the outer level then inspects whatever happens to
+      sit at the top - a number that measures PACKAGING, not coverage - and reports a
+      confident pass. Measured on one real app archive: 21 libraries at the top level,
+      194 more nested one level down and never opened, including the BLAS and codec
+      libraries the alignment work was actually about.
+
+    `src` is a path or a file-like object, so nested members are re-opened from bytes
+    without touching disk.
+    """
+    if depth > 4:                       # a zip bomb should not become a hang
+        return
+    z = zipfile.ZipFile(src)
     for n in z.namelist():
-        if n.endswith(".so"):
+        low = n.lower()
+        if low.endswith(".so"):
             check_blob("%s::%s" % (label, n), z.read(n), bad, ok)
+        elif low.endswith(ARCHIVE_EXTS):
+            check_archive(io.BytesIO(z.read(n)), "%s::%s" % (label, n),
+                          bad, ok, depth + 1)
 
 
 def main(paths):
@@ -102,7 +124,7 @@ def main(paths):
                     #   the PATH ITSELF was an archive. It printed "0 ok, 0 MISALIGNED"
                     #   and exited 0 - a gate reporting success for having looked at
                     #   nothing, which is the exact failure the docstring warns about.
-                    elif f.endswith((".whl", ".apk", ".zip", ".aar")):
+                    elif f.lower().endswith(ARCHIVE_EXTS):
                         check_archive(full, rel, bad, ok)
                         checked_containers += 1
         # APKs and wheels are both zips; this walks either without being told which.
