@@ -62,12 +62,18 @@ done
 # (it ships libpython3.14t.so), so ctypes.pythonapi fails on the device. The hand-built
 # 3.14.0 target that apps shipped carried exactly this line; a Docker rebuild without it
 # was caught by a stdlib diff against that target. Fail loudly if the source moved.
+# Later upstream releases (3.14.7) already load `_sysconfig.get_config_var("LDLIBRARY")`,
+# which names libpython3.14t.so on this build - correct as shipped, so only the old
+# hard-coded spelling is rewritten, and the gate checks the PROPERTY (no hard-coded name
+# under the Android branch), not one spelling of the fix.
 ct=Lib/ctypes/__init__.py
 if grep -q 'pythonapi = PyDLL("libpython%d.%d.so" % _sys.version_info\[:2\])' "$ct"; then
     sed -i 's|pythonapi = PyDLL("libpython%d.%d.so" % _sys.version_info\[:2\])|pythonapi = PyDLL("libpython%d.%d%s.so" % (_sys.version_info[0], _sys.version_info[1], _sys.abiflags))|' "$ct"
 fi
-grep -A1 '_sys.platform == "android"' "$ct" | grep -q 'abiflags' \
-    || { echo "ctypes android pythonapi: abiflags fix missing (upstream text changed?)" >&2; exit 1; }
+grep -q 'libpython%d.%d.so"' "$ct" \
+    && { echo "ctypes android pythonapi: hard-coded libpython name still present" >&2; exit 1; }
+grep -E -A3 '_sys\.platform (== "android"|in \["android")' "$ct" | grep -E -q 'abiflags|LDLIBRARY' \
+    || { echo "ctypes android pythonapi: neither the abiflags fix nor LDLIBRARY found (upstream text changed?)" >&2; exit 1; }
 
 # Remove any existing installation in the prefix.
 rm -rf $PREFIX/{include,lib}/python$version_short
