@@ -15,6 +15,7 @@ Built by the Docker drivers below and gated; split on the licence boundary (see 
 
 | release | contents |
 |---|---|
+| `v3.14.8-0` | CPython 3.14.8t target + numpy, scipy, matplotlib, pillow, contourpy, kiwisolver, cffi wheels (current) |
 | `v3.14.7-0` | CPython 3.14.7t target + numpy, scipy, matplotlib, pillow, contourpy, kiwisolver, cffi wheels |
 | `v3.14.0-0` | CPython 3.14.0t target (pairs with `chaquopy-17.0.1-ft`) |
 | `chaquopy-17.0.1-ft` | Chaquopy 17.0.1 Gradle plugin + runtime patched for free-threaded 3.14 (MIT; patch attached) |
