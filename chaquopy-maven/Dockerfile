@@ -54,10 +54,10 @@ RUN python3 -m venv /opt/cythonenv && /opt/cythonenv/bin/pip install --no-cache-
 ENV PATH=/opt/cythonenv/bin:$PATH
 
 # The runtime's :compilePython-3.14 task runs a HOST `python3.14` (a GIL build) to byte-compile
-# the bootstrap modules. The hand build used deadsnakes' /usr/bin/python3.14 = 3.14.6; a PPA
-# cannot be pinned, so install exactly that version with uv instead.
-ARG HOST_PY314=3.14.6
-COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /usr/local/bin/uv
+# the bootstrap modules. One 3.14.x everywhere (2026-10-20: the target moved 3.14.0 -> 3.14.8
+# for the free-threaded allocator fixes gh-145615 / gh-151065), so the host matches it.
+ARG HOST_PY314=3.14.8
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /usr/local/bin/uv
 RUN UV_PYTHON_INSTALL_DIR=/opt/uv-python uv python install "${HOST_PY314}" \
     && ln -s "$(UV_PYTHON_INSTALL_DIR=/opt/uv-python uv python find "${HOST_PY314}")" /usr/local/bin/python3.14 \
     && python3.14 -c 'import sys,sysconfig; v=sys.version.split()[0]; assert v=="'"${HOST_PY314}"'", v; assert not sysconfig.get_config_var("Py_GIL_DISABLED"); print("host python3.14", v, "GIL")'

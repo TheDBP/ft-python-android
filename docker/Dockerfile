@@ -13,9 +13,9 @@
 FROM ubuntu:24.04
 
 # ---- pinned versions (override at build time with --build-arg) ----------------
-ARG PY_VERSION=3.14.7
+ARG PY_VERSION=3.14.8
 ARG NDK_VERSION=27.3.13750724
-ARG NDK_ZIP=android-ndk-r27c-linux.zip
+ARG NDK_ZIP=android-ndk-r27d-linux.zip
 ARG CHAQUOPY_REF=f004380
 ARG OPENBLAS_VERSION=0.3.34
 ARG NUMPY_VERSION=2.5.1
@@ -23,8 +23,8 @@ ARG SCIPY_VERSION=1.18.0
 # The HOST tools, pinned (2026-10-18). Unpinned, a rebuild a month later resolved
 # meson-python 0.22.1 and scipy 1.18.0's build refused it (it needs <0.22). These are the
 # exact versions inside the image that built the 2026-09-17 wheels.
-ARG UV_VERSION=0.12.15
-ARG HOST_PY_VERSION=3.14.7
+ARG UV_VERSION=0.13.4
+ARG HOST_PY_VERSION=3.14.8
 ARG MESON_VERSION=1.12.0
 ARG MESON_PYTHON_VERSION=0.21.1
 ARG NINJA_VERSION=1.13.2

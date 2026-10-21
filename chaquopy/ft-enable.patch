@@ -10,7 +10,8 @@ index 1c28f08..9a6d13d 100644
 -        PYTHON_VERSIONS.put("3.11.14", "0");
 -        PYTHON_VERSIONS.put("3.12.12", "0");
 -        PYTHON_VERSIONS.put("3.13.9", "0");
-         PYTHON_VERSIONS.put("3.14.0", "0");
+-        PYTHON_VERSIONS.put("3.14.0", "0");
++        PYTHON_VERSIONS.put("3.14.8", "0");
      }
  
 @@ -33,7 +29,7 @@ public class Common {

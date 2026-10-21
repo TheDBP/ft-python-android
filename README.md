@@ -50,8 +50,8 @@ out/wheels/scipy-*-cp314-cp314t-android_26_arm64_v8a.whl
 out/wheels/matplotlib-* pillow-* contourpy-* kiwisolver-*      # the chart stack
 out/wheels/cffi-*-cp314-cp314t-android_26_arm64_v8a.whl
 out/wheels/soundfile-*-py3-none-android_26_arm64_v8a.whl       # bundles libsndfile
-out/target/target-3.14.7-0-arm64-v8a.zip                       # + stdlib / stdlib-pyc
-out/target/target-3.14.7-0.pom                                 # the Maven target
+out/target/target-3.14.8-0-arm64-v8a.zip                       # + stdlib / stdlib-pyc
+out/target/target-3.14.8-0.pom                                 # the Maven target
 out/logs/...                                                   # every stage's log
 ```
 
